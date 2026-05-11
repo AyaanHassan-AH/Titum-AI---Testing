@@ -28,26 +28,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Firestore Logic ---
+    // --- Data Management ---
+    // Always load from LocalStorage first as a cache/fallback
+    try {
+        answers = JSON.parse(localStorage.getItem('titum_answers')) || {};
+    } catch (e) {
+        console.error("Error loading from localStorage:", e);
+        answers = {};
+    }
+
     const isFirebaseEnabled = typeof firebase !== 'undefined' && window.db;
     
     if (isFirebaseEnabled) {
+        console.log("Firestore integration active.");
         const docRef = window.db.collection('titum_testing').doc('answers');
         
         // Listen for real-time updates from Firestore
         docRef.onSnapshot((doc) => {
             if (doc.exists) {
-                const data = doc.data();
-                answers = data || {};
+                const data = doc.data() || {};
+                console.log("Firestore data received:", Object.keys(data).length, "answers found.");
+                
+                // Merge Firestore data into local answers (Firestore wins for remote sync)
+                // We convert all keys to strings for consistency
+                Object.keys(data).forEach(key => {
+                    answers[key] = data[key];
+                });
+
+                localStorage.setItem('titum_answers', JSON.stringify(answers));
                 updateProgress();
                 refreshVisibleAnswers();
+            } else {
+                console.log("No Firestore document found. Initializing on first save.");
             }
         }, (error) => {
-            console.error("Firestore Error:", error);
+            console.error("Firestore Sync Error:", error);
         });
     } else {
-        // Fallback to LocalStorage if Firebase is not configured
-        answers = JSON.parse(localStorage.getItem('titum_answers')) || {};
+        console.warn("Firebase not enabled. Using local storage only.");
     }
 
     // --- Core Functions ---
@@ -127,7 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const inputs = document.querySelectorAll('.answer-input');
         inputs.forEach(input => {
             const qNum = input.getAttribute('oninput').match(/\d+/)[0];
-            if (answers[qNum] !== undefined && input.value !== answers[qNum]) {
+            // Don't overwrite if the user is currently typing in this specific box
+            if (document.activeElement !== input && answers[qNum] !== undefined && input.value !== answers[qNum]) {
                 input.value = answers[qNum];
                 checkFilled(qNum);
             }
@@ -144,13 +163,20 @@ document.addEventListener('DOMContentLoaded', () => {
     window.saveAnswer = (num, val) => {
         answers[num] = val;
         
+        // Always save to localStorage immediately for instant persistence on refresh
+        localStorage.setItem('titum_answers', JSON.stringify(answers));
+        updateProgress();
+        
         if (isFirebaseEnabled) {
             const docRef = window.db.collection('titum_testing').doc('answers');
             // Use set with merge: true to update only the specific question
-            docRef.set({ [num]: val }, { merge: true }).catch(err => console.error("Error saving to Firestore:", err));
-        } else {
-            localStorage.setItem('titum_answers', JSON.stringify(answers));
-            updateProgress();
+            // We use string keys for Firestore fields
+            docRef.set({ [String(num)]: val }, { merge: true })
+                .catch(err => {
+                    console.error("Firestore Sync Error:", err);
+                    // Silently fail in UI to avoid annoying the user, 
+                    // localStorage has already secured the data.
+                });
         }
     };
 
