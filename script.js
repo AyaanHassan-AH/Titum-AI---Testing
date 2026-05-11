@@ -10,30 +10,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressText = document.getElementById('progressText');
     const progressBarFill = document.getElementById('progressBarFill');
     const notification = document.getElementById('notification');
-    const syncStatus = document.getElementById('syncStatus');
 
-    // --- Firebase Logic ---
+    // --- Interactive Background ---
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth) * 100;
+        const y = (e.clientY / window.innerHeight) * 100;
+        document.body.style.setProperty('--mouse-x', `${x}%`);
+        document.body.style.setProperty('--mouse-y', `${y}%`);
+    });
+
+    document.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+            const x = (e.touches[0].clientX / window.innerWidth) * 100;
+            const y = (e.touches[0].clientY / window.innerHeight) * 100;
+            document.body.style.setProperty('--mouse-x', `${x}%`);
+            document.body.style.setProperty('--mouse-y', `${y}%`);
+        }
+    });
+
+    // --- Firestore Logic ---
     const isFirebaseEnabled = typeof firebase !== 'undefined' && window.db;
     
     if (isFirebaseEnabled) {
-        const answersRef = firebase.database().ref('titum_answers');
+        const docRef = window.db.collection('titum_testing').doc('answers');
         
-        // Listen for real-time updates
-        answersRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                answers = data;
+        // Listen for real-time updates from Firestore
+        docRef.onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                answers = data || {};
                 updateProgress();
                 refreshVisibleAnswers();
-                syncStatus.innerHTML = '<i data-lucide="cloud"></i> Synced';
-                syncStatus.className = 'sync-status online';
-                lucide.createIcons();
             }
+        }, (error) => {
+            console.error("Firestore Error:", error);
         });
     } else {
         // Fallback to LocalStorage if Firebase is not configured
         answers = JSON.parse(localStorage.getItem('titum_answers')) || {};
-        syncStatus.innerHTML = '<i data-lucide="hard-drive"></i> Local Mode';
     }
 
     // --- Core Functions ---
@@ -113,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const inputs = document.querySelectorAll('.answer-input');
         inputs.forEach(input => {
             const qNum = input.getAttribute('oninput').match(/\d+/)[0];
-            if (answers[qNum] && input.value !== answers[qNum]) {
+            if (answers[qNum] !== undefined && input.value !== answers[qNum]) {
                 input.value = answers[qNum];
                 checkFilled(qNum);
             }
@@ -124,14 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let saveTimeout;
     window.debouncedSave = (num, val) => {
         clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => saveAnswer(num, val), 500);
+        saveTimeout = setTimeout(() => saveAnswer(num, val), 800); // Slightly higher debounce for Firestore
     };
 
     window.saveAnswer = (num, val) => {
         answers[num] = val;
         
         if (isFirebaseEnabled) {
-            firebase.database().ref('titum_answers/' + num).set(val);
+            const docRef = window.db.collection('titum_testing').doc('answers');
+            // Use set with merge: true to update only the specific question
+            docRef.set({ [num]: val }, { merge: true }).catch(err => console.error("Error saving to Firestore:", err));
         } else {
             localStorage.setItem('titum_answers', JSON.stringify(answers));
             updateProgress();
@@ -164,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updateProgress() {
-        const answeredCount = Object.values(answers).filter(a => a && a.trim().length > 0).length;
+        const answeredCount = Object.values(answers).filter(a => a && typeof a === 'string' && a.trim().length > 0).length;
         const total = 200;
         progressText.innerText = `${answeredCount} / ${total}`;
         progressBarFill.style.width = `${(answeredCount / total) * 100}%`;
@@ -178,9 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Navigation ---
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            const target = e.target.closest('.nav-btn');
+            if (!target) return;
             document.querySelector('.nav-btn.active').classList.remove('active');
-            e.target.classList.add('active');
-            currentPhase = parseInt(e.target.dataset.phase);
+            target.classList.add('active');
+            currentPhase = parseInt(target.dataset.phase);
             currentCategory = null;
             renderCategories();
             renderQuestions();

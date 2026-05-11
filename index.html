@@ -12,12 +12,8 @@
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-</head>
-
 <body>
+    <div class="bg-glow"></div>
     <div class="app-container">
         <!-- Sidebar (Hidden on Mobile) -->
         <aside class="sidebar">
@@ -66,7 +62,6 @@
                     <div class="stats">
                         <div class="progress-info">
                             <span id="progressText">0 / 200</span>
-                            <span class="sync-status" id="syncStatus"><i data-lucide="cloud-off"></i> Offline</span>
                         </div>
                         <div class="progress-bar">
                             <div id="progressBarFill" style="width: 0%"></div>
@@ -84,13 +79,16 @@
     <!-- Notification -->
     <div id="notification" class="notification">Copied!</div>
 
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <!-- Firebase Config Template (User needs to fill this) -->
     <script>
         // Replace with your actual Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyBbbzsqf5SZUep07J5MSvklssk3yUsX0lE",
             authDomain: "titum---testing.firebaseapp.com",
-            databaseURL: "https://titum---testing-default-rtdb.firebaseio.com",
             projectId: "titum---testing",
             storageBucket: "titum---testing.firebasestorage.app",
             messagingSenderId: "762988812806",
@@ -100,8 +98,8 @@
         // Initialize Firebase
         if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
             firebase.initializeApp(firebaseConfig);
-            const database = firebase.database();
-            window.db = database;
+            const db = firebase.firestore();
+            window.db = db;
         } else {
             console.warn("Firebase not configured. Running in local-only mode.");
         }
