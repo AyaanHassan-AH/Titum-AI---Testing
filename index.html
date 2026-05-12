@@ -15,33 +15,35 @@
 <body>
     <div class="bg-glow"></div>
     <div class="app-container">
-        <!-- Sidebar (Hidden on Mobile) -->
+        <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="logo-container">
-                <div class="logo-icon">T</div>
-                <h1>TITUM AI <span>TESTING</span></h1>
-            </div>
-
-            <nav class="phase-nav">
-                <button class="nav-btn active" data-phase="1">PHASE 1</button>
-                <button class="nav-btn" data-phase="2">PHASE 2</button>
-            </nav>
-
             <div class="category-list-container">
                 <div class="category-list" id="categoryList"></div>
-            </div>
-
-            <div class="sidebar-footer">
-                <button id="exportBtn" class="primary-btn">
-                    <i data-lucide="download"></i>
-                    EXPORT .TXT
-                </button>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
+                <div class="top-bar-main">
+                    <div class="logo-container">
+                        <div class="logo-icon">T</div>
+                        <h1>TITUM AI <span>TESTING</span></h1>
+                    </div>
+
+                    <nav class="phase-nav">
+                        <button class="nav-btn active" data-phase="1">PHASE 1</button>
+                        <button class="nav-btn" data-phase="2">PHASE 2</button>
+                    </nav>
+
+                    <div class="header-actions">
+                        <button id="exportBtn" class="primary-btn export-btn">
+                            <i data-lucide="download"></i>
+                            <span>EXPORT .TXT</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="instructions-card">
                     <div class="instr-header">
                         <i data-lucide="info"></i>
